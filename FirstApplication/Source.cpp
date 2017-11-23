@@ -2,19 +2,30 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include "Shader.h"
+
 #include <SOIL.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+
+#include "Shader.h"
+#include "Camera.h"
+
 using namespace std;
 
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) //?GLFW сам вызывает эту функцию при нажатии на какую либо из клавиш?
+Camera mainCam;
+double lastxpos = 0;
+double lastypos = 0;
+void handle_mouse(GLFWwindow *window, double xpos, double ypos)
 {
-	//Пример из учебника
-	//При нажатии на esc окно закрывается
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);
+	double xofset = (xpos - lastxpos);
+	double yofset = (ypos - lastypos);
+	lastxpos = xpos;
+	lastypos = ypos; 
+	mainCam.handleMouseInput(xofset, yofset);
 }
-
 int main()
 {
 	glfwInit();
@@ -53,24 +64,69 @@ int main()
 
 	glViewport(0, 0,/*Нижний левый угол x y*/ width, height/*Отрисовка по ширине и высоте x y*/);
 	
-	GLfloat vertices[] = {
-		// Positions          // Colors           // Texture Coords
-		0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // Top Right
-		0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // Bottom Right
-		-0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // Bottom Left
-		-0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // Top Left 
+	float vertices[] = {
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+		0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+		-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+		-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 	};
-	GLuint indices[] = {
-		0, 1, 3, 
-		1, 2, 3  
+
+	glm::vec3 cubePositions[] = {
+		glm::vec3(0.0f,  0.0f,  0.0f),
+		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f,  2.0f, -2.5f),
+		glm::vec3(1.5f,  0.2f, -1.5f),
+		glm::vec3(-1.3f,  1.0f, -1.5f)
 	};
 	
 	int texWidth, texHeight; 
 	unsigned char* image = SOIL_load_image("./src/img/wood.jpg", &texWidth, &texHeight, 0, SOIL_LOAD_RGB);
-
-	GLuint VBO, VAO, EBO, texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	unsigned int texture1;
+	GLuint VBO, VAO;
+	glGenTextures(1, &texture1);
+	glBindTexture(GL_TEXTURE_2D, texture1);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);	
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
@@ -80,49 +136,86 @@ int main()
 
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
 
 	glBindVertexArray(VAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 	//Позиция вершины
-	glVertexAttribPointer(0 /*позиция аргумента*/, 3/*размера аргумента*/, GL_FLOAT/*тип*/, GL_FALSE/*нормализация данных*/, 8 * sizeof(GLfloat)/*шаг*/, (GLvoid*)0/*смещение*/);
+	glVertexAttribPointer(0 /*позиция аргумента*/, 3/*размера аргумента*/, GL_FLOAT/*тип*/, GL_FALSE/*нормализация данных*/, 5 * sizeof(GLfloat)/*шаг*/, (GLvoid*)0/*смещение*/);
 	glEnableVertexAttribArray(0);
 	//Цвет вершины
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-	glEnableVertexAttribArray(1);
+	//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	//glEnableVertexAttribArray(1);
 	//Позиция текстуры
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
-	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
 	
 	glBindVertexArray(0);
 
 	
 	Shader myShader("./Shaders/MyShader.vs", "./Shaders/MyShader.frag");
+	myShader.Use();
+	glUniform1i(glGetUniformLocation(myShader.ID, "texture1"), 0);
+	cout << myShader.ID << endl;
+	myShader.setInt("texture1", 1);
+	
+	
 	while (!glfwWindowShouldClose(window))
 	{
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwPollEvents(); //Проверка на вызов событий клавиатуры или мыши, либо чего то другое. В скобках задается функция колбэка
 		
+
 		//Заливка экрана
-		glClearColor(0.3f, 0.3f, 0.3f, 0.1f); //Цвет чистого окна по умолчанию (красный, зеленый, синий, прозрачность)
-		glClear(GL_COLOR_BUFFER_BIT); //Очистка окна
-		glBindTexture(GL_TEXTURE_2D, texture);
-		myShader.Use();		
+		glClearColor(0.3f, 0.3f, 0.3f, 1.0f); //Цвет чистого окна по умолчанию (красный, зеленый, синий, прозрачность)
+		glEnable(GL_DEPTH_TEST); // проверка глубины
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); //Очистка окна
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, texture1);
+
+		mainCam.handleInput(window);
+		glfwSetCursorPosCallback(window, handle_mouse);
+		
+
+		glm::mat4 view;
+		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+		view = glm::lookAt(mainCam.cameraPos, mainCam.cameraPos + mainCam.cameraFront, mainCam.cameraUp);
+
+		glm::mat4 projection;
+		projection = glm::perspective(glm::radians(90.0f), (float)width / (float)height, 0.1f, 100.0f);
+
+		myShader.Use();
+
+
+		unsigned int viewLoc = glGetUniformLocation(myShader.ID, "view");
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+		unsigned int projectionLoc = glGetUniformLocation(myShader.ID, "projection");
+		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+		
+
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		for (unsigned int i = 0; i < 10; i++)
+		{
+			glm::mat4 cube;
+			cube = glm::translate(cube, cubePositions[i]);
+			unsigned int  cubeLoc = glGetUniformLocation(myShader.ID, "model");
+			glUniformMatrix4fv(cubeLoc, 1, GL_FALSE, glm::value_ptr(cube));
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+		
 		glBindVertexArray(0);	
 
 		glfwSwapBuffers(window); //?Обновление изображения?
 
-		glfwSetKeyCallback(window, key_callback);//Реакция на нажатие клавиши
 	}
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
+
 	glfwTerminate();//Очистка выделенных ресурсов
 	return 0; 
 }
+
