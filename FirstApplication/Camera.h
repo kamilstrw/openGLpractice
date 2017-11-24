@@ -19,6 +19,7 @@ public:
 	~Camera();
 	void handleInput(GLFWwindow * window);
 	void handleMouseInput(double xpos, double ypos);
+	glm::mat4 getView();
 };
 #endif
 

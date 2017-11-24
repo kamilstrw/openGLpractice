@@ -9,7 +9,10 @@ Camera::Camera()
 Camera::~Camera()
 {
 }
-
+glm::mat4 Camera::getView()
+{
+	return glm::lookAt(this->cameraPos, this->cameraPos + this->cameraFront, this->cameraUp);
+}
 void Camera::handleInput(GLFWwindow * window)
 {
 	float deltaTime = 0.0f;	
